@@ -1,0 +1,22 @@
+{
+  "name": "online-logger-bot",
+  "version": "1.0.0",
+  "description": "Discord Bot that logs presence status of users on server",
+  "main": "index.js",
+  "author": "Jasper Spahl <jasperspahl@web.de>",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "discord.js": "^13.2.0",
+    "dotenv": "^10.0.0",
+    "knex": "^0.95.11",
+    "pg": "^8.7.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "nodemon": "^2.0.13"
+  }
+}
