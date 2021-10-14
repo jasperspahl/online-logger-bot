@@ -67,8 +67,8 @@ const drawStatus = async msg => {
 	let user_ids = msg.mentions.users.map(user => user.id);
 	if (user_ids.length == 0) {
 		msg.reply('Please Mention the users you want to see the stats of');
+		user_ids = [msg.author.id];
 	}
-	user_ids = [msg.author.id];
 	const data = await db(tablenames.entry)
 		.join(tablenames.state, `${tablenames.entry}.state_id`, `${tablenames.state}.id`)
 		.join(tablenames.user, `${tablenames.entry}.user_id`, `${tablenames.user}.id`)
