@@ -65,26 +65,45 @@ client.on('messageCreate', (message) => {
  */
 const drawStatus = async msg => {
 	let user_ids = msg.mentions.users.map(user => user.id);
+	msg.mentions.roles.forEach(role => {
+		console.log(role.name);
+		role.members.forEach(member => {
+			user_ids.push(member.id);
+		})
+	})
 	if (user_ids.length == 0) {
 		msg.reply('Please Mention the users you want to see the stats of');
 		user_ids = [msg.author.id];
 	}
-	const data = await db(tablenames.entry)
-		.join(tablenames.state, `${tablenames.entry}.state_id`, `${tablenames.state}.id`)
-		.join(tablenames.user, `${tablenames.entry}.user_id`, `${tablenames.user}.id`)
-		.select('user.username', 'state.id', 'entry.created_at')
-		.whereIn('user.discord_id', user_ids)
-		.orderBy(['user.username', { column: 'entry.created_at', order: 'desc' }]);
+	let data = [];
+	if (msg.mentions.everyone) {
+		data = await db(tablenames.entry)
+			.join(tablenames.state, `${tablenames.entry}.state_id`, `${tablenames.state}.id`)
+			.join(tablenames.user, `${tablenames.entry}.user_id`, `${tablenames.user}.id`)
+			.select('user.username', 'state.id', 'entry.created_at')
+			.orderBy(['user.username', { column: 'entry.created_at', order: 'desc' }]);
+			user_ids = await db(tablenames.user).select('id');
+			console.log(user_ids);
+	}
+	else {
+		data = await db(tablenames.entry)
+			.join(tablenames.state, `${tablenames.entry}.state_id`, `${tablenames.state}.id`)
+			.join(tablenames.user, `${tablenames.entry}.user_id`, `${tablenames.user}.id`)
+			.select('user.username', 'state.id', 'entry.created_at')
+			.whereIn('user.discord_id', user_ids)
+			.orderBy(['user.username', { column: 'entry.created_at', order: 'desc' }]);
+	}
 
 	const now = new Date();
 
 	const hourwidth = 50;
-	const width = hourwidth * 12;
+	const width = hourwidth * 24;
 	const sectionHeight = 40;
-	const height = (user_ids.length) * sectionHeight;
+	const height = (user_ids.length+1) * sectionHeight;
 
 
 	Canvas.registerFont('./assets/FiraCode-Regular.ttf', { family: 'FiraCode' });
+
 	const canvas = Canvas.createCanvas(width, height);
 	const ctx = canvas.getContext('2d');
 	ctx.fillStyle = color.bg;
@@ -94,11 +113,12 @@ const drawStatus = async msg => {
 	// / 30 pix per hour => 1 pix per 2 min => 60*60*1000 / 30
 	const divval = 3600000 / hourwidth;
 	let user = data[0].username;
-	let nth_user = 0;
+	let nth_user = 1;
 	let last = 0;
 	ctx.font = '20px FiraCode';
 	ctx.textBaseline = 'middle';
-	console.log('drawing data for', user);
+	ctx.textAlign = 'left';
+	console.log('Drawing data for "', user, '"');
 	for (const i in data) {
 		if (data[i].username !== user) {
 			ctx.fillStyle = color.fg;
@@ -111,18 +131,13 @@ const drawStatus = async msg => {
 		const offset = now - new Date(data[i].created_at);
 
 		const pix_off = Math.round(offset / divval) - last;
-		// console.log('min passed: ', offset / 60000);
-		// console.log('pix_off: ', pix_off);
-		// console.log(width - pix_off - last);
 		ctx.fillStyle = color.getStatusColor(data[i].id);
-		// console.log(ctx.fillStyle);
 		ctx.fillRect(width - pix_off - last, nth_user * sectionHeight, pix_off, sectionHeight);
 
 		last += pix_off;
 	}
 	ctx.fillStyle = color.fg;
 	ctx.fillText(user, 10, nth_user * sectionHeight + sectionHeight / 2);
-	// console.log('users: ', nth_user);
 
 	ctx.strokeStyle = `${color.gray}cc`;
 	for (let i = sectionHeight; i < height; i += sectionHeight) {
@@ -132,11 +147,19 @@ const drawStatus = async msg => {
 		ctx.stroke();
 	}
 	// i !== 0 => Ajusting for offset to full hour
+	let hour = now.getHours();
+	ctx.fillStyle = color.fg;
+	ctx.textAlign = 'center';
 	for (let i = width - now % 3600000 / divval; i > 0; i -= hourwidth) {
 		ctx.beginPath();
-		ctx.moveTo(i, 0);
+		ctx.moveTo(i, sectionHeight);
 		ctx.lineTo(i, height);
 		ctx.stroke();
+		ctx.fillText(`${hour}`, i, sectionHeight / 2);
+		hour--;
+		if (hour == 0) {
+			hour = 24
+		}
 	}
 
 	const attachment = new MessageAttachment(canvas.toBuffer(), 'image.png');
