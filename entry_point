@@ -1,0 +1,2 @@
+#!/bin/sh
+[ $# -eq 0 ] && npm run migrate && npm run seed && npm start
